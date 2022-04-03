@@ -177,6 +177,7 @@ iptables -A INPUT -p tcp --dport "${SSHPORT}" -j ACCEPT
 # accept IPSec/NAT-T for VPN (ESP not needed with forceencaps, as ESP goes inside UDP)
 iptables -A INPUT -p udp --dport  500 -j ACCEPT
 iptables -A INPUT -p udp --dport 4500 -j ACCEPT
+iptables -A INPUT -p tcp --dport 1723 -j ACCEPT
 
 # forward VPN traffic anywhere
 iptables -A FORWARD --match policy --pol ipsec --dir in  --proto esp -s "${VPNIPPOOL}" -j ACCEPT
@@ -188,7 +189,11 @@ iptables -t mangle -A FORWARD --match policy --pol ipsec --dir in -s "${VPNIPPOO
 # masquerade VPN traffic over eth0 etc.
 iptables -t nat -A POSTROUTING -s "${VPNIPPOOL}" -o "${ETH0ORSIMILAR}" -m policy --pol ipsec --dir out -j ACCEPT  # exempt IPsec traffic from masquerading
 iptables -t nat -A POSTROUTING -s "${VPNIPPOOL}" -o "${ETH0ORSIMILAR}" -j MASQUERADE
-
+#######
+iptables -t nat -A POSTROUTING -o "${ETH0ORSIMILAR}" -j MASQUERADE
+iptables --table nat --append POSTROUTING --out-interface ppp0 -j MASQUERADE
+iptables -I INPUT -s 10.1.0.0/24 -i ppp0 -j ACCEPT
+iptables --append FORWARD --in-interface "${ETH0ORSIMILAR}" -j ACCEPT
 
 # fall through to drop any other input and forward traffic
 
